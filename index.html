@@ -1,0 +1,2467 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Алхимия Цвета — Сортировка жидкостей по колбам</title>
+  <meta name="description" content="Яркая алхимическая 2D-головоломка: сортируйте неоновые эликсиры по стеклянным колбам, открывайте бесконечные уровни и делитесь успехами ВКонтакте." />
+  <meta property="og:title" content="Алхимия Цвета — Сортировка жидкостей по колбам" />
+  <meta property="og:description" content="Завораживающая головоломка с переливанием эликсиров и бесконечными уровнями." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Manrope:wght@500;600;700;800&display=swap');
+
+    :root {
+      --bg-deep: #041019;
+      --bg-mid: #07222b;
+      --bg-emerald: #08332c;
+      --surface-glass: rgba(9, 28, 36, 0.78);
+      --surface-border: rgba(94, 234, 212, 0.18);
+      --text-main: #eefbf7;
+      --text-muted: #8cb7b0;
+      --accent-gold: #f5b942;
+      --accent-emerald: #1ee3b5;
+      --accent-emerald-dark: #0e9f7e;
+      --danger: #ff5d73;
+      --font-display: 'Cormorant Garamond', Georgia, serif;
+      --font-ui: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 35%, #0c3538 0%, #061c26 52%, #030c14 100%);
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      touch-action: manipulation;
+    }
+
+    .app-shell {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      overflow: hidden;
+    }
+
+    /* Top HUD */
+    .hud-header {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 18px 8px;
+      width: 100%;
+      max-width: 980px;
+      margin: 0 auto;
+      flex-shrink: 0;
+    }
+
+    .brand-level {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .game-title {
+      font-family: var(--font-display);
+      font-size: clamp(18px, 3vw, 26px);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #f4fdf9;
+      line-height: 1.05;
+      white-space: nowrap;
+      text-shadow: 0 2px 12px rgba(30, 227, 181, 0.28);
+    }
+
+    .level-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: clamp(12px, 2vw, 14px);
+      font-weight: 600;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .level-meta strong {
+      color: var(--accent-emerald);
+      font-weight: 700;
+    }
+
+    .hud-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .coins-display {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 13px;
+      border-radius: 12px;
+      background: rgba(11, 33, 41, 0.85);
+      border: 1px solid rgba(245, 185, 66, 0.32);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 4px 14px rgba(0, 0, 0, 0.28);
+      font-size: 14px;
+      font-weight: 800;
+      color: #ffe39b;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .coin-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #fff0a8 0%, #f5b942 55%, #b9750c 100%);
+      box-shadow: 0 0 8px rgba(245, 185, 66, 0.55);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      color: #5c3700;
+      flex-shrink: 0;
+    }
+
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      border: 1px solid var(--surface-border);
+      background: var(--surface-glass);
+      color: var(--text-main);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.16s ease, border-color 0.16s ease;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    }
+
+    .icon-btn:hover {
+      background: rgba(18, 52, 62, 0.92);
+      border-color: rgba(94, 234, 212, 0.42);
+    }
+
+    .icon-btn:active {
+      transform: scale(0.94);
+    }
+
+    .icon-btn:focus-visible,
+    .action-btn:focus-visible,
+    .modal-btn:focus-visible {
+      outline: 2px solid var(--accent-emerald);
+      outline-offset: 2px;
+    }
+
+    /* Main Canvas Stage */
+    .stage-wrap {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas#gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+
+    /* Soft Hint / Toast Banner */
+    .toast-banner {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-16px);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 15;
+      padding: 9px 18px;
+      border-radius: 12px;
+      background: rgba(7, 26, 35, 0.94);
+      border: 1px solid rgba(94, 234, 212, 0.35);
+      color: #e6fff9;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      white-space: nowrap;
+      max-width: calc(100vw - 32px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+      transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
+    }
+
+    .toast-banner.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Deadlock Helper Bar */
+    .stuck-bar {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%) translateY(14px);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 14;
+      padding: 8px 16px;
+      border-radius: 12px;
+      background: rgba(54, 18, 28, 0.9);
+      border: 1px solid rgba(255, 93, 115, 0.45);
+      color: #ffd9df;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      max-width: calc(100vw - 24px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease;
+    }
+
+    .stuck-bar.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Bottom Controls */
+    .controls-footer {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 8px 14px 16px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .action-btn {
+      position: relative;
+      height: 56px;
+      padding: 8px 10px;
+      border-radius: 14px;
+      border: 1px solid var(--surface-border);
+      background: linear-gradient(180deg, rgba(16, 48, 58, 0.92) 0%, rgba(8, 27, 36, 0.96) 100%);
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 6px 18px rgba(0, 0, 0, 0.35);
+      transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.16s ease, background 0.16s ease, opacity 0.16s ease;
+    }
+
+    .action-btn:hover:not(:disabled) {
+      border-color: rgba(30, 227, 181, 0.5);
+      background: linear-gradient(180deg, rgba(21, 61, 73, 0.96) 0%, rgba(10, 34, 45, 0.98) 100%);
+      transform: translateY(-1px);
+    }
+
+    .action-btn:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+
+    .action-btn:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+    }
+
+    .action-btn.btn-ad-ready {
+      border-color: rgba(245, 185, 66, 0.72);
+      background: linear-gradient(180deg, rgba(44, 58, 42, 0.94) 0%, rgba(18, 34, 34, 0.98) 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 232, 160, 0.22), 0 6px 20px rgba(245, 185, 66, 0.18);
+    }
+
+    .action-btn.btn-ad-ready:hover:not(:disabled) {
+      border-color: rgba(255, 211, 116, 0.95);
+      background: linear-gradient(180deg, rgba(58, 74, 48, 0.98) 0%, rgba(24, 44, 40, 0.98) 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 232, 160, 0.3), 0 8px 24px rgba(245, 185, 66, 0.28);
+    }
+
+    .btn-icon-wrap {
+      width: 30px;
+      height: 30px;
+      border-radius: 9px;
+      background: rgba(30, 227, 181, 0.14);
+      color: var(--accent-emerald);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .btn-ad-ready .btn-icon-wrap {
+      background: rgba(245, 185, 66, 0.28);
+      color: #ffd875;
+    }
+
+    .btn-text-col {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      min-width: 0;
+      text-align: left;
+    }
+
+    .btn-label {
+      font-size: clamp(12px, 2.3vw, 14px);
+      font-weight: 700;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    .btn-sub {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      line-height: 1.2;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .btn-ad-ready .btn-sub {
+      color: #ffd374;
+    }
+
+    /* Victory & Rules Modals */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(2, 10, 16, 0.78);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 410px;
+      border-radius: 22px;
+      padding: 28px 24px 24px;
+      background: linear-gradient(175deg, rgba(12, 42, 50, 0.97) 0%, rgba(5, 20, 28, 0.99) 100%);
+      border: 1px solid rgba(94, 234, 212, 0.28);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      text-align: center;
+      transform: scale(0.92) translateY(12px);
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-backdrop.open .modal-card {
+      transform: scale(1) translateY(0);
+    }
+
+    .victory-emblem {
+      width: 68px;
+      height: 68px;
+      margin: 0 auto 14px;
+      border-radius: 20px;
+      background: radial-gradient(circle at 35% 30%, rgba(30, 227, 181, 0.32), rgba(245, 185, 66, 0.14));
+      border: 1px solid rgba(245, 185, 66, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 28px rgba(30, 227, 181, 0.25);
+    }
+
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: clamp(26px, 5vw, 32px);
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.15;
+      margin-bottom: 6px;
+    }
+
+    .modal-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 18px;
+    }
+
+    .victory-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .stat-box {
+      padding: 12px 10px;
+      border-radius: 14px;
+      background: rgba(4, 15, 22, 0.65);
+      border: 1px solid rgba(94, 234, 212, 0.14);
+    }
+
+    .stat-val {
+      font-size: 20px;
+      font-weight: 800;
+      color: #ffe39b;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+    }
+
+    .stat-val.emerald {
+      color: var(--accent-emerald);
+    }
+
+    .stat-name {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .modal-btn {
+      width: 100%;
+      min-height: 48px;
+      padding: 12px 18px;
+      border-radius: 14px;
+      border: none;
+      font-family: var(--font-ui);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), filter 0.16s ease, background 0.16s ease;
+    }
+
+    .modal-btn:active {
+      transform: scale(0.97);
+    }
+
+    .modal-btn-primary {
+      background: linear-gradient(135deg, #1ee3b5 0%, #0ea885 100%);
+      color: #03221c;
+      box-shadow: 0 8px 24px rgba(30, 227, 181, 0.34);
+    }
+
+    .modal-btn-primary:hover {
+      filter: brightness(1.07);
+    }
+
+    .modal-btn-vk {
+      background: linear-gradient(135deg, #2688eb 0%, #0077ff 100%);
+      color: #ffffff;
+      box-shadow: 0 6px 20px rgba(0, 119, 255, 0.32);
+    }
+
+    .modal-btn-vk:hover {
+      filter: brightness(1.08);
+    }
+
+    .modal-btn-secondary {
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text-main);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .rules-list {
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 14px 0 20px;
+      font-size: 14px;
+      line-height: 1.45;
+      color: #d6efe9;
+    }
+
+    .rules-item {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .rules-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      background: rgba(30, 227, 181, 0.16);
+      color: var(--accent-emerald);
+      font-weight: 800;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    @media (max-width: 480px) {
+      .hud-header {
+        padding: 10px 12px 4px;
+      }
+      .controls-footer {
+        padding: 6px 10px 12px;
+        gap: 7px;
+      }
+      .action-btn {
+        height: 52px;
+        padding: 6px 8px;
+        gap: 6px;
+        border-radius: 12px;
+      }
+      .btn-icon-wrap {
+        width: 26px;
+        height: 26px;
+        border-radius: 7px;
+      }
+      .btn-label {
+        font-size: 12px;
+      }
+      .btn-sub {
+        font-size: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Top HUD -->
+    <header class="hud-header">
+      <div class="brand-level">
+        <h1 class="game-title">Алхимия Цвета</h1>
+        <div class="level-meta">
+          <span>Уровень <strong id="hudLevel">1</strong></span>
+          <span aria-hidden="true">·</span>
+          <span>Ходы: <strong id="hudMoves">0</strong></span>
+        </div>
+      </div>
+
+      <div class="hud-right">
+        <div class="coins-display" title="Алхимические монеты">
+          <span class="coin-icon" aria-hidden="true">◈</span>
+          <span id="hudCoins">0</span>
+        </div>
+        <button id="btnRules" class="icon-btn" type="button" aria-label="Правила игры" title="Правила">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        </button>
+        <button id="btnSound" class="icon-btn" type="button" aria-label="Переключить звук" title="Звук">
+          <svg id="iconSoundOn" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+          <svg id="iconSoundOff" style="display:none" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main 2D Canvas -->
+    <main class="stage-wrap">
+      <div id="toastBanner" class="toast-banner" role="status" aria-live="polite"></div>
+      <div id="stuckBar" class="stuck-bar" role="status">Доступных ходов нет — отмените ход, добавьте колбу или начните заново</div>
+      <canvas id="gameCanvas"></canvas>
+    </main>
+
+    <!-- Bottom 3 Action Buttons -->
+    <footer class="controls-footer">
+      <button id="btnUndo" class="action-btn" type="button">
+        <span class="btn-icon-wrap">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7v6h6"></path>
+            <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path>
+          </svg>
+        </span>
+        <span class="btn-text-col">
+          <span class="btn-label">Отменить ход</span>
+          <span class="btn-sub" id="undoSub">Бесплатно: 3</span>
+        </span>
+      </button>
+
+      <button id="btnAddFlask" class="action-btn btn-ad-ready" type="button">
+        <span class="btn-icon-wrap">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 3h6"></path>
+            <path d="M10 3v6l-4.5 8A2 2 0 0 0 7.2 20h9.6a2 2 0 0 0 1.7-3L14 9V3"></path>
+            <path d="M12 12v4"></path>
+            <path d="M10 14h4"></path>
+          </svg>
+        </span>
+        <span class="btn-text-col">
+          <span class="btn-label">+1 Колба</span>
+          <span class="btn-sub" id="addFlaskSub">За рекламу</span>
+        </span>
+      </button>
+
+      <button id="btnRestart" class="action-btn" type="button">
+        <span class="btn-icon-wrap">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+          </svg>
+        </span>
+        <span class="btn-text-col">
+          <span class="btn-label">Заново</span>
+          <span class="btn-sub">Сброс уровня</span>
+        </span>
+      </button>
+    </footer>
+  </div>
+
+  <!-- Victory Modal -->
+  <div id="victoryModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="victoryTitle">
+    <div class="modal-card">
+      <div class="victory-emblem" aria-hidden="true">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#ffd374" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 2v7.31"></path>
+          <path d="M14 9.3V1.99"></path>
+          <path d="M8.5 2h7"></path>
+          <path d="M14 9.3a6.5 6.5 0 1 1-4 0"></path>
+          <path d="M5.52 16h12.96"></path>
+        </svg>
+      </div>
+      <h2 id="victoryTitle" class="modal-title">Уровень пройден!</h2>
+      <p id="victorySubtitle" class="modal-subtitle">Все эликсиры идеально очищены и запечатаны в колбах.</p>
+
+      <div class="victory-stats">
+        <div class="stat-box">
+          <div id="victoryReward" class="stat-val">+25</div>
+          <div class="stat-name">Монет получено</div>
+        </div>
+        <div class="stat-box">
+          <div id="victoryMoves" class="stat-val emerald">12</div>
+          <div class="stat-name">Сделано ходов</div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btnNextLevel" class="modal-btn modal-btn-primary" type="button">
+          Следующий уровень
+        </button>
+        <button id="btnShareLevel" class="modal-btn modal-btn-vk" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M15.07 2H8.93C3.33 2 2 3.33 2 8.93v6.14C2 20.67 3.33 22 8.93 22h6.14c5.6 0 6.93-1.33 6.93-6.93V8.93C22 3.33 20.67 2 15.07 2zm3.08 14.27h-1.46c-.55 0-.72-.44-1.71-1.44-.86-.83-1.24-.94-1.46-.94-.3 0-.38.08-.38.49v1.31c0 .35-.11.56-1.04.56-1.54 0-3.25-.93-4.45-2.66-1.81-2.54-2.31-4.45-2.31-4.84 0-.21.08-.41.49-.41h1.46c.37 0 .51.17.65.56.72 2.08 1.93 3.9 2.42 3.9.19 0 .27-.08.27-.55v-2.14c-.06-.99-.58-1.08-.58-1.43 0-.17.14-.34.37-.34h2.29c.31 0 .42.16.42.53v2.89c0 .31.14.42.22.42.19 0 .34-.11.68-.45 1.05-1.18 1.81-3 1.81-3 .1-.21.27-.41.64-.41h1.46c.44 0 .54.23.44.54-.19.86-1.97 3.37-1.97 3.37-.16.25-.22.37 0 .66.16.22.68.67 1.03 1.08.64.72 1.13 1.33 1.26 1.75.13.42-.08.63-.5.63z"/>
+          </svg>
+          Поделиться уровнем
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rules Modal -->
+  <div id="rulesModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+    <div class="modal-card">
+      <h2 id="rulesTitle" class="modal-title">Как играть</h2>
+      <div class="rules-list">
+        <div class="rules-item">
+          <span class="rules-num">1</span>
+          <span>Нажмите на колбу, чтобы приподнять её, а затем на другую — верхний слой эликсира перельётся туда.</span>
+        </div>
+        <div class="rules-item">
+          <span class="rules-num">2</span>
+          <span>Переливать жидкость можно только в пустую колбу или поверх эликсира такого же цвета при наличии свободного места.</span>
+        </div>
+        <div class="rules-item">
+          <span class="rules-num">3</span>
+          <span>Соберите в одной колбе 4 слоя одного цвета, чтобы запечатать её магической пробкой. Запечатайте все цвета для победы!</span>
+        </div>
+      </div>
+      <button id="btnCloseRules" class="modal-btn modal-btn-primary" type="button">Понятно</button>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      // =========================================================
+      // 1. VK BRIDGE INTEGRATION
+      // =========================================================
+      const VKService = {
+        initialized: false,
+        isVKEnv: false,
+        bridgeAlive: false,
+
+        detectVKEnvironment() {
+          try {
+            if (typeof vkBridge === 'undefined' || !vkBridge) return false;
+            const hasVKParams = /[?&](vk_app_id|vk_user_id|vk_platform)=/.test(window.location.search || '');
+            let hasVKReferrer = false;
+            if (document.referrer) {
+              try {
+                const host = new URL(document.referrer).hostname.toLowerCase();
+                hasVKReferrer = /(^|\.)(vk\.com|vk\.ru|vkontakte\.ru)$/.test(host);
+              } catch (_) {}
+            }
+            const isWebView = typeof vkBridge.isWebView === 'function' ? vkBridge.isWebView() : false;
+            const isEmbedded = typeof vkBridge.isEmbedded === 'function' ? vkBridge.isEmbedded() : false;
+            return Boolean(isWebView || (isEmbedded && (hasVKParams || hasVKReferrer)) || hasVKParams);
+          } catch (_) {
+            return false;
+          }
+        },
+
+        sendWithTimeout(method, params, timeoutMs = 1500) {
+          const callPromise = vkBridge.send(method, params);
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('VK_BRIDGE_TIMEOUT')), timeoutMs);
+          });
+          return Promise.race([callPromise, timeoutPromise]);
+        },
+
+        init() {
+          try {
+            this.isVKEnv = this.detectVKEnvironment();
+            if (typeof vkBridge !== 'undefined' && vkBridge) {
+              const p = vkBridge.send('VKWebAppInit');
+              if (p && typeof p.then === 'function') {
+                p.then(() => {
+                  this.initialized = true;
+                  this.bridgeAlive = true;
+                }).catch(() => {});
+              }
+            }
+          } catch (err) {
+            console.warn('VK Bridge init skipped:', err);
+          }
+        },
+
+        async showRewardedAd() {
+          // Вне ВКонтакте (локальный тест / предпросмотр AI Studio) срабатывает мгновенно
+          if (typeof vkBridge === 'undefined' || !vkBridge || !this.isVKEnv) {
+            return { ok: true, localFallback: true };
+          }
+          try {
+            // Если мост ВК уже ответил на VKWebAppInit — ждём реальный просмотр рекламы;
+            // иначе страхуемся таймаутом 1.5 сек, чтобы интерфейс не зависал.
+            const data = this.bridgeAlive
+              ? await vkBridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' })
+              : await this.sendWithTimeout('VKWebAppShowNativeAds', { ad_format: 'reward' }, 1500);
+            return { ok: Boolean(data && data.result), localFallback: false };
+          } catch (err) {
+            if (err && err.message === 'VK_BRIDGE_TIMEOUT') {
+              return { ok: true, localFallback: true };
+            }
+            console.warn('Rewarded ad error:', err);
+            return { ok: false, localFallback: false };
+          }
+        },
+
+        async showInterstitialAd() {
+          if (typeof vkBridge === 'undefined' || !vkBridge || !this.isVKEnv) {
+            return;
+          }
+          try {
+            if (this.bridgeAlive) {
+              await vkBridge.send('VKWebAppShowNativeAds', { ad_format: 'interstitial' });
+            } else {
+              await this.sendWithTimeout('VKWebAppShowNativeAds', { ad_format: 'interstitial' }, 1500);
+            }
+          } catch (err) {
+            console.warn('Interstitial ad skipped:', err);
+          }
+        },
+
+        async shareLevel(level) {
+          const message = 'Я прошёл ' + level + ' уровень в головоломке «Алхимия Цвета»! Сможешь повторить?';
+          if (typeof vkBridge === 'undefined' || !vkBridge || !this.isVKEnv) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              try {
+                await navigator.clipboard.writeText(message);
+                UI.showToast('Текст приглашения скопирован в буфер обмена!');
+                return;
+              } catch (_) {}
+            }
+            UI.showToast('Поделиться: «' + message + '»');
+            return;
+          }
+          try {
+            await this.sendWithTimeout('VKWebAppShowWallPostBox', { message }, 1500);
+          } catch (err) {
+            console.warn('Share cancelled or failed:', err);
+            UI.showToast('Поделиться: «' + message + '»');
+          }
+        }
+      };
+
+      // =========================================================
+      // 2. WEB AUDIO API SYNTHESIZER (NO EXTERNAL FILES)
+      // =========================================================
+      const SoundFX = {
+        ctx: null,
+        muted: false,
+
+        loadPreference() {
+          try {
+            this.muted = localStorage.getItem('alchemy_color_muted') === '1';
+          } catch (_) {}
+        },
+
+        savePreference() {
+          try {
+            localStorage.setItem('alchemy_color_muted', this.muted ? '1' : '0');
+          } catch (_) {}
+        },
+
+        ensureContext() {
+          if (this.muted) return null;
+          try {
+            if (!this.ctx) {
+              const AudioCtx = window.AudioContext || window.webkitAudioContext;
+              if (!AudioCtx) return null;
+              this.ctx = new AudioCtx();
+            }
+            if (this.ctx.state === 'suspended') {
+              this.ctx.resume().catch(() => {});
+            }
+            return this.ctx;
+          } catch (_) {
+            return null;
+          }
+        },
+
+        playSelect() {
+          const ctx = this.ensureContext();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(760, now);
+          osc.frequency.exponentialRampToValueAtTime(1180, now + 0.08);
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(0.11, now + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.14);
+        },
+
+        playDeselect() {
+          const ctx = this.ensureContext();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(640, now);
+          osc.frequency.exponentialRampToValueAtTime(420, now + 0.07);
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.1);
+        },
+
+        playInvalid() {
+          const ctx = this.ensureContext();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          [0, 0.08].forEach((offset, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(i === 0 ? 190 : 150, now + offset);
+            osc.frequency.exponentialRampToValueAtTime(110, now + offset + 0.07);
+            gain.gain.setValueAtTime(0.1, now + offset);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.08);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + offset);
+            osc.stop(now + offset + 0.09);
+          });
+        },
+
+        playPour(durationSec, amountCount) {
+          const ctx = this.ensureContext();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+
+          // Filtered fluid stream noise
+          const bufLen = Math.floor(ctx.sampleRate * durationSec);
+          const buffer = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          let lastOut = 0;
+          for (let i = 0; i < bufLen; i++) {
+            const white = Math.random() * 2 - 1;
+            lastOut = (lastOut + 0.06 * white) / 1.06;
+            data[i] = lastOut * 2.4;
+          }
+          const noise = ctx.createBufferSource();
+          noise.buffer = buffer;
+
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.Q.setValueAtTime(2.6, now);
+          filter.frequency.setValueAtTime(620, now);
+          filter.frequency.linearRampToValueAtTime(1080, now + durationSec * 0.75);
+          filter.frequency.linearRampToValueAtTime(750, now + durationSec);
+
+          const noiseGain = ctx.createGain();
+          noiseGain.gain.setValueAtTime(0.001, now);
+          noiseGain.gain.linearRampToValueAtTime(0.09, now + 0.06);
+          noiseGain.gain.setValueAtTime(0.08, now + durationSec - 0.08);
+          noiseGain.gain.exponentialRampToValueAtTime(0.001, now + durationSec);
+
+          noise.connect(filter);
+          filter.connect(noiseGain);
+          noiseGain.connect(ctx.destination);
+          noise.start(now);
+          noise.stop(now + durationSec);
+
+          // Water bloop / bubble droplets
+          const bubbles = 4 + amountCount * 2;
+          for (let i = 0; i < bubbles; i++) {
+            const t = now + 0.04 + (i / bubbles) * (durationSec - 0.07) + (Math.random() - 0.5) * 0.025;
+            const bOsc = ctx.createOscillator();
+            const bGain = ctx.createGain();
+            const startFreq = 320 + Math.random() * 240 + i * 36;
+            bOsc.type = 'sine';
+            bOsc.frequency.setValueAtTime(startFreq, t);
+            bOsc.frequency.exponentialRampToValueAtTime(startFreq * 2.05, t + 0.055);
+            bGain.gain.setValueAtTime(0.001, t);
+            bGain.gain.linearRampToValueAtTime(0.085, t + 0.01);
+            bGain.gain.exponentialRampToValueAtTime(0.001, t + 0.065);
+            bOsc.connect(bGain);
+            bGain.connect(ctx.destination);
+            bOsc.start(t);
+            bOsc.stop(t + 0.07);
+          }
+        },
+
+        playSeal() {
+          const ctx = this.ensureContext();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const notes = [523.25, 659.25, 783.99, 1046.5, 1318.51];
+          notes.forEach((freq, idx) => {
+            const t = now + idx * 0.055;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.001, t);
+            gain.gain.linearRampToValueAtTime(0.09, t + 0.015);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.4);
+          });
+        },
+
+        playVictory() {
+          const ctx = this.ensureContext();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const chord = [
+            { f: 523.25, t: 0.00, d: 0.45 },
+            { f: 659.25, t: 0.08, d: 0.45 },
+            { f: 783.99, t: 0.16, d: 0.50 },
+            { f: 1046.50, t: 0.26, d: 0.75 },
+            { f: 1318.51, t: 0.36, d: 0.85 },
+            { f: 1567.98, t: 0.46, d: 0.95 }
+          ];
+          chord.forEach((n) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(n.f, now + n.t);
+            gain.gain.setValueAtTime(0.001, now + n.t);
+            gain.gain.linearRampToValueAtTime(0.11, now + n.t + 0.025);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + n.t + n.d);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + n.t);
+            osc.stop(now + n.t + n.d + 0.02);
+          });
+        },
+
+        playClick() {
+          const ctx = this.ensureContext();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(680, now + 0.04);
+          gain.gain.setValueAtTime(0.06, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.06);
+        }
+      };
+
+      // =========================================================
+      // 3. ALCHEMICAL NEON PALETTE & LEVEL GENERATOR + SOLVER
+      // =========================================================
+      const ELIXIRS = [
+        { name: 'Рубин',     top: '#ff6e9c', mid: '#ff1f68', bot: '#9e0039', glow: 'rgba(255, 42, 109, 0.7)' },
+        { name: 'Изумруд',   top: '#6effcb', mid: '#00e68a', bot: '#007a49', glow: 'rgba(0, 245, 155, 0.7)' },
+        { name: 'Лазурь',    top: '#80f0ff', mid: '#00c8ff', bot: '#006299', glow: 'rgba(0, 212, 255, 0.7)' },
+        { name: 'Аурум',     top: '#ffe678', mid: '#ffaa00', bot: '#9e5c00', glow: 'rgba(255, 184, 0, 0.7)' },
+        { name: 'Аметист',   top: '#df9eff', mid: '#b026ff', bot: '#5c0099', glow: 'rgba(181, 55, 255, 0.7)' },
+        { name: 'Киноварь',  top: '#ffa870', mid: '#ff5e14', bot: '#9e2a00', glow: 'rgba(255, 107, 26, 0.7)' },
+        { name: 'Сапфир',    top: '#8cb0ff', mid: '#3b6cff', bot: '#122b94', glow: 'rgba(59, 108, 255, 0.7)' },
+        { name: 'Лайм',      top: '#d4ff75', mid: '#99f500', bot: '#4c8700', glow: 'rgba(166, 255, 0, 0.65)' },
+        { name: 'Кварц',     top: '#ff9ce6', mid: '#ff36c8', bot: '#990073', glow: 'rgba(255, 68, 204, 0.7)' },
+        { name: 'Бирюза',    top: '#9effef', mid: '#00f5d4', bot: '#008273', glow: 'rgba(0, 255, 225, 0.7)' }
+      ];
+
+      const CAPACITY = 4;
+
+      function createRng(seed) {
+        let s = (seed >>> 0) || 1;
+        return function () {
+          s = (s + 0x6D2B79F5) >>> 0;
+          let t = Math.imul(s ^ (s >>> 15), 1 | s);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function getColorCountForLevel(level) {
+        if (level === 1) return 3; // 3 цвета + 2 пустые = 5 колб
+        if (level === 2) return 3;
+        if (level <= 4) return 4;
+        if (level <= 7) return 5;
+        if (level <= 11) return 6;
+        if (level <= 16) return 7;
+        if (level <= 23) return 8;
+        if (level <= 32) return 9;
+        return 10;
+      }
+
+      function isFlaskUniform(f) {
+        if (f.length === 0) return true;
+        for (let i = 1; i < f.length; i++) {
+          if (f[i] !== f[0]) return false;
+        }
+        return true;
+      }
+
+      function isFlaskComplete(f) {
+        return f.length === CAPACITY && isFlaskUniform(f);
+      }
+
+      // Быстрый проверяющий солвер для гарантии проходимости уровня
+      function isSolvable(initialFlasks) {
+        const visited = new Set();
+        const start = initialFlasks.map(f => f.slice());
+
+        function canonical(state) {
+          return state.map(f => f.join(',')).sort().join('|');
+        }
+
+        function isWon(state) {
+          for (let i = 0; i < state.length; i++) {
+            const f = state[i];
+            if (f.length !== 0 && !isFlaskComplete(f)) return false;
+          }
+          return true;
+        }
+
+        let nodes = 0;
+        const MAX_NODES = 14000;
+
+        function dfs(state) {
+          if (isWon(state)) return true;
+          if (++nodes > MAX_NODES) return false;
+
+          const key = canonical(state);
+          if (visited.has(key)) return false;
+          visited.add(key);
+
+          const moves = [];
+          let usedEmptyTarget = false;
+
+          for (let i = 0; i < state.length; i++) {
+            const src = state[i];
+            if (src.length === 0 || isFlaskComplete(src)) continue;
+
+            const topColor = src[src.length - 1];
+            const srcUniform = isFlaskUniform(src);
+
+            for (let j = 0; j < state.length; j++) {
+              if (i === j) continue;
+              const dst = state[j];
+              if (dst.length >= CAPACITY) continue;
+
+              if (dst.length === 0) {
+                if (srcUniform) continue; // бессмысленно переливать однородную колбу в пустую
+                if (usedEmptyTarget) continue; // достаточно одной пустой колбы
+                usedEmptyTarget = true;
+                moves.push({ i, j, score: 1 });
+              } else if (dst[dst.length - 1] === topColor) {
+                let score = 10;
+                if (isFlaskUniform(dst)) score += 12;
+                if (srcUniform) score += 8;
+                moves.push({ i, j, score });
+              }
+            }
+          }
+
+          moves.sort((a, b) => b.score - a.score);
+
+          for (let m = 0; m < moves.length; m++) {
+            const { i, j } = moves[m];
+            const next = state.map(f => f.slice());
+            const src = next[i];
+            const dst = next[j];
+            const color = src[src.length - 1];
+            while (src.length > 0 && src[src.length - 1] === color && dst.length < CAPACITY) {
+              dst.push(src.pop());
+            }
+            if (dfs(next)) return true;
+          }
+          return false;
+        }
+
+        return dfs(start);
+      }
+
+      function generateLevelLayout(level) {
+        const numColors = getColorCountForLevel(level);
+        const totalFlasks = numColors + 2; // Всегда 2 пустые колбы
+
+        for (let attempt = 0; attempt < 60; attempt++) {
+          const rng = createRng(level * 9973 + attempt * 131 + 42);
+          const pool = [];
+          for (let c = 0; c < numColors; c++) {
+            for (let k = 0; k < CAPACITY; k++) {
+              pool.push(c);
+            }
+          }
+
+          // Перемешивание Фишера — Йетса
+          for (let i = pool.length - 1; i > 0; i--) {
+            const j = Math.floor(rng() * (i + 1));
+            const tmp = pool[i];
+            pool[i] = pool[j];
+            pool[j] = tmp;
+          }
+
+          const flasks = [];
+          let hasAlreadyComplete = false;
+          let mixedCount = 0;
+
+          for (let f = 0; f < numColors; f++) {
+            const tube = pool.slice(f * CAPACITY, (f + 1) * CAPACITY);
+            if (isFlaskComplete(tube)) {
+              hasAlreadyComplete = true;
+              break;
+            }
+            if (!isFlaskUniform(tube)) mixedCount++;
+            flasks.push(tube);
+          }
+
+          if (hasAlreadyComplete || mixedCount < Math.min(numColors, 3)) {
+            continue;
+          }
+
+          // Для 1-го уровня делаем понятный, приятный, но не тривиальный старт
+          flasks.push([]);
+          flasks.push([]);
+
+          if (isSolvable(flasks)) {
+            return flasks;
+          }
+        }
+
+        // Надёжный резервный генератор через обратные перемещения из решённого состояния
+        const fallback = [];
+        for (let c = 0; c < numColors; c++) {
+          fallback.push([c, c, c, c]);
+        }
+        fallback.push([], []);
+        const rng = createRng(level * 4099 + 7);
+        for (let step = 0; step < numColors * 12; step++) {
+          const a = Math.floor(rng() * numColors);
+          const b = Math.floor(rng() * numColors);
+          if (a !== b) {
+            const idxA = Math.floor(rng() * CAPACITY);
+            const idxB = Math.floor(rng() * CAPACITY);
+            const t = fallback[a][idxA];
+            fallback[a][idxA] = fallback[b][idxB];
+            fallback[b][idxB] = t;
+          }
+        }
+        return fallback;
+      }
+
+      // =========================================================
+      // 4. GAME STATE & PERSISTENCE
+      // =========================================================
+      const STORAGE_LEVEL_KEY = 'alchemy_color_level_v1';
+      const STORAGE_COINS_KEY = 'alchemy_color_coins_v1';
+
+      const state = {
+        level: 1,
+        coins: 50,
+        moves: 0,
+        freeUndosLeft: 3,
+        extraFlasksAdded: 0,
+        maxExtraFlasks: 2,
+        initialFlasks: [],
+        flasks: [], // array of { layers: number[], sealed: boolean, lift: number, shake: number, sealAnim: number }
+        history: [], // array of { from, to, count, color, prevSealed }
+        selectedIdx: -1,
+        pourAnim: null, // active pouring animation state
+        particles: [],
+        ambientMotes: [],
+        bubbles: [],
+        won: false,
+        adBusy: false
+      };
+
+      function loadProgress() {
+        try {
+          const lvl = parseInt(localStorage.getItem(STORAGE_LEVEL_KEY), 10);
+          const cns = parseInt(localStorage.getItem(STORAGE_COINS_KEY), 10);
+          if (!Number.isNaN(lvl) && lvl >= 1) state.level = lvl;
+          if (!Number.isNaN(cns) && cns >= 0) state.coins = cns;
+        } catch (_) {}
+      }
+
+      function saveProgress() {
+        try {
+          localStorage.setItem(STORAGE_LEVEL_KEY, String(state.level));
+          localStorage.setItem(STORAGE_COINS_KEY, String(state.coins));
+        } catch (_) {}
+      }
+
+      function initLevel(levelNum) {
+        state.level = levelNum;
+        state.moves = 0;
+        state.freeUndosLeft = 3;
+        state.extraFlasksAdded = 0;
+        state.history = [];
+        state.selectedIdx = -1;
+        state.pourAnim = null;
+        state.particles = [];
+        state.won = false;
+
+        const raw = generateLevelLayout(levelNum);
+        state.initialFlasks = raw.map(arr => arr.slice());
+        state.flasks = raw.map(arr => ({
+          layers: arr.slice(),
+          sealed: isFlaskComplete(arr),
+          lift: 0,
+          shake: 0,
+          sealAnim: 0
+        }));
+
+        saveProgress();
+        updateLayoutMetrics();
+        UI.hideVictory();
+        UI.updateAll();
+        checkDeadlock();
+      }
+
+      function restartCurrentLevel() {
+        SoundFX.playClick();
+        state.moves = 0;
+        state.freeUndosLeft = 3;
+        state.extraFlasksAdded = 0;
+        state.history = [];
+        state.selectedIdx = -1;
+        state.pourAnim = null;
+        state.particles = [];
+        state.won = false;
+
+        state.flasks = state.initialFlasks.map(arr => ({
+          layers: arr.slice(),
+          sealed: isFlaskComplete(arr),
+          lift: 0,
+          shake: 0,
+          sealAnim: 0
+        }));
+
+        updateLayoutMetrics();
+        UI.hideVictory();
+        UI.updateAll();
+        checkDeadlock();
+      }
+
+      // =========================================================
+      // 5. GAMEPLAY RULES & INTERACTIONS
+      // =========================================================
+      function canPour(fromIdx, toIdx) {
+        if (fromIdx === toIdx) return false;
+        const src = state.flasks[fromIdx];
+        const dst = state.flasks[toIdx];
+        if (!src || !dst) return false;
+        if (src.sealed || dst.sealed) return false;
+        if (src.layers.length === 0) return false;
+        if (dst.layers.length >= CAPACITY) return false;
+        if (dst.layers.length === 0) return true;
+        return src.layers[src.layers.length - 1] === dst.layers[dst.layers.length - 1];
+      }
+
+      function hasAnyValidMove() {
+        for (let i = 0; i < state.flasks.length; i++) {
+          if (state.flasks[i].sealed || state.flasks[i].layers.length === 0) continue;
+          const srcUniform = isFlaskUniform(state.flasks[i].layers);
+          for (let j = 0; j < state.flasks.length; j++) {
+            if (i === j) continue;
+            if (canPour(i, j)) {
+              // Если осталась только однородная колба и пустая — это бесполезный цикл, не считаем выходом
+              if (srcUniform && state.flasks[j].layers.length === 0) continue;
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      function checkDeadlock() {
+        if (state.won) {
+          UI.setStuck(false);
+          return;
+        }
+        const stuck = !hasAnyValidMove();
+        UI.setStuck(stuck);
+      }
+
+      function checkVictory() {
+        for (let i = 0; i < state.flasks.length; i++) {
+          const f = state.flasks[i];
+          if (f.layers.length === 0) continue;
+          if (!f.sealed) return false;
+        }
+        return true;
+      }
+
+      function spawnSparks(x, y, colorIndex, count) {
+        const elixir = ELIXIRS[colorIndex % ELIXIRS.length];
+        for (let i = 0; i < count; i++) {
+          const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.9;
+          const speed = 130 + Math.random() * 250;
+          state.particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 40,
+            gravity: 340 + Math.random() * 140,
+            radius: 2.4 + Math.random() * 4,
+            color: i % 4 === 0 ? '#ffe896' : elixir.top,
+            glow: elixir.glow,
+            life: 0,
+            maxLife: 0.65 + Math.random() * 0.55
+          });
+        }
+      }
+
+      function startPour(fromIdx, toIdx) {
+        const src = state.flasks[fromIdx];
+        const dst = state.flasks[toIdx];
+        const topColor = src.layers[src.layers.length - 1];
+
+        let count = 0;
+        for (let k = src.layers.length - 1; k >= 0; k--) {
+          if (src.layers[k] === topColor && dst.layers.length + count < CAPACITY) {
+            count++;
+          } else {
+            break;
+          }
+        }
+        if (count <= 0) return;
+
+        // Забираем слои из источника сразу в модель и визуально показываем плавное убывание в анимации
+        const srcStartCount = src.layers.length;
+        const dstStartCount = dst.layers.length;
+
+        for (let k = 0; k < count; k++) {
+          src.layers.pop();
+          dst.layers.push(topColor);
+        }
+
+        state.history.push({
+          from: fromIdx,
+          to: toIdx,
+          count,
+          color: topColor
+        });
+        state.moves++;
+        state.selectedIdx = -1;
+
+        const duration = 0.44;
+        state.pourAnim = {
+          fromIdx,
+          toIdx,
+          color: topColor,
+          count,
+          srcStartCount,
+          dstStartCount,
+          elapsed: 0,
+          duration,
+          soundPlayed: false
+        };
+
+        SoundFX.playPour(duration * 0.85, count);
+        UI.updateAll();
+      }
+
+      function completePourAnimation() {
+        const anim = state.pourAnim;
+        state.pourAnim = null;
+        if (!anim) return;
+
+        const dst = state.flasks[anim.toIdx];
+        if (isFlaskComplete(dst.layers)) {
+          dst.sealed = true;
+          dst.sealAnim = 1;
+          const pos = getFlaskRect(anim.toIdx);
+          spawnSparks(pos.cx, pos.topY + 6, dst.layers[0], 38);
+          SoundFX.playSeal();
+        }
+
+        // Синхронизируем статус запечатывания всех колб перед проверкой победы
+        for (let i = 0; i < state.flasks.length; i++) {
+          if (isFlaskComplete(state.flasks[i].layers)) {
+            state.flasks[i].sealed = true;
+          }
+        }
+
+        if (checkVictory()) {
+          state.won = true;
+          const reward = 20 + Math.min(30, getColorCountForLevel(state.level) * 3);
+          state.coins += reward;
+          saveProgress();
+
+          // Победный салют из всех запечатанных колб
+          state.flasks.forEach((f, idx) => {
+            if (f.sealed && f.layers.length > 0) {
+              const p = getFlaskRect(idx);
+              spawnSparks(p.cx, p.topY, f.layers[0], 26);
+            }
+          });
+          SoundFX.playVictory();
+          UI.updateAll();
+
+          setTimeout(() => {
+            if (state.won) {
+              UI.showVictory(reward, state.moves, state.level);
+            }
+          }, 520);
+        } else {
+          checkDeadlock();
+        }
+      }
+
+      function handleFlaskClick(idx) {
+        if (state.won || state.pourAnim || state.adBusy) return;
+        const clicked = state.flasks[idx];
+        if (!clicked) return;
+
+        if (clicked.sealed) {
+          clicked.shake = 1;
+          SoundFX.playInvalid();
+          return;
+        }
+
+        if (state.selectedIdx === -1) {
+          if (clicked.layers.length === 0) {
+            clicked.shake = 0.7;
+            SoundFX.playInvalid();
+            return;
+          }
+          state.selectedIdx = idx;
+          SoundFX.playSelect();
+          return;
+        }
+
+        if (state.selectedIdx === idx) {
+          state.selectedIdx = -1;
+          SoundFX.playDeselect();
+          return;
+        }
+
+        if (canPour(state.selectedIdx, idx)) {
+          startPour(state.selectedIdx, idx);
+        } else {
+          state.flasks[idx].shake = 1;
+          state.selectedIdx = -1;
+          SoundFX.playInvalid();
+        }
+      }
+
+      async function performUndo() {
+        if (state.won || state.pourAnim || state.adBusy || state.history.length === 0) return;
+
+        if (state.freeUndosLeft > 0) {
+          state.freeUndosLeft--;
+        } else {
+          state.adBusy = true;
+          UI.updateAll();
+          const res = await VKService.showRewardedAd();
+          state.adBusy = false;
+          if (!res.ok) {
+            UI.showToast('Просмотр рекламы не завершён');
+            UI.updateAll();
+            return;
+          }
+        }
+
+        const last = state.history.pop();
+        const src = state.flasks[last.from];
+        const dst = state.flasks[last.to];
+
+        for (let k = 0; k < last.count; k++) {
+          if (dst.layers.length > 0) {
+            src.layers.push(dst.layers.pop());
+          }
+        }
+        dst.sealed = isFlaskComplete(dst.layers);
+        src.sealed = isFlaskComplete(src.layers);
+        state.selectedIdx = -1;
+        state.moves = Math.max(0, state.moves - 1);
+
+        SoundFX.playDeselect();
+        UI.updateAll();
+        checkDeadlock();
+      }
+
+      async function performAddFlask() {
+        if (state.won || state.pourAnim || state.adBusy) return;
+        if (state.extraFlasksAdded >= state.maxExtraFlasks) {
+          UI.showToast('Максимум дополнительных колб на уровне достигнут');
+          return;
+        }
+
+        state.adBusy = true;
+        UI.updateAll();
+        const res = await VKService.showRewardedAd();
+        state.adBusy = false;
+
+        if (!res.ok) {
+          UI.showToast('Просмотр рекламы не завершён');
+          UI.updateAll();
+          return;
+        }
+
+        state.extraFlasksAdded++;
+        state.selectedIdx = -1;
+        state.flasks.push({
+          layers: [],
+          sealed: false,
+          lift: 0,
+          shake: 0,
+          sealAnim: 0
+        });
+
+        const newIdx = state.flasks.length - 1;
+        updateLayoutMetrics();
+        const pos = getFlaskRect(newIdx);
+        spawnSparks(pos.cx, pos.cy, 1, 24);
+        SoundFX.playSelect();
+
+        UI.showToast('Добавлена дополнительная пустая колба!');
+        UI.updateAll();
+        checkDeadlock();
+      }
+
+      // =========================================================
+      // 6. CANVAS RENDERING & LAYOUT ENGINE
+      // =========================================================
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+
+      const view = {
+        width: 800,
+        height: 600,
+        dpr: 1,
+        rects: []
+      };
+
+      function initAmbientMotes() {
+        state.ambientMotes = [];
+        for (let i = 0; i < 34; i++) {
+          state.ambientMotes.push({
+            x: Math.random(),
+            y: Math.random(),
+            r: 0.8 + Math.random() * 2.1,
+            speedY: 0.012 + Math.random() * 0.024,
+            drift: (Math.random() - 0.5) * 0.015,
+            phase: Math.random() * Math.PI * 2,
+            alpha: 0.14 + Math.random() * 0.36,
+            tint: i % 3 === 0 ? '#ffd374' : '#5eead4'
+          });
+        }
+      }
+
+      function updateLayoutMetrics() {
+        const count = state.flasks.length;
+        const w = view.width;
+        const h = view.height;
+
+        // Определяем число рядов адаптивно под телефон и десктоп
+        let rows = 1;
+        if (count > 6 || (w < 540 && count > 4)) {
+          rows = 2;
+        }
+
+        const topReserve = Math.max(44, h * 0.11); // место для приподнятия и переливания
+        const bottomReserve = Math.max(20, h * 0.05);
+        const availH = Math.max(180, h - topReserve - bottomReserve);
+
+        const row1Count = rows === 1 ? count : Math.ceil(count / 2);
+        const row2Count = rows === 1 ? 0 : count - row1Count;
+        const maxPerRow = Math.max(row1Count, row2Count);
+
+        const sidePad = Math.max(16, w * 0.04);
+        const availW = w - sidePad * 2;
+
+        // Вычисляем оптимальный размер колбы
+        const maxFlaskHByHeight = rows === 1 ? availH * 0.78 : availH * 0.44;
+        const gapRatio = 0.34;
+        const maxFlaskWByWidth = availW / (maxPerRow + (maxPerRow - 1) * gapRatio);
+
+        let flaskW = Math.min(maxFlaskWByWidth, maxFlaskHByHeight * 0.35, 84);
+        flaskW = Math.max(38, flaskW);
+        let flaskH = Math.min(flaskW / 0.34, maxFlaskHByHeight, 236);
+        flaskW = Math.min(flaskW, flaskH * 0.36);
+
+        const gapX = Math.min(34, Math.max(12, flaskW * 0.38));
+        const rowGap = rows === 2 ? Math.max(36, Math.min(68, availH - flaskH * 2)) : 0;
+
+        const totalBlockH = rows === 1 ? flaskH : flaskH * 2 + rowGap;
+        const startY = topReserve + Math.max(8, (availH - totalBlockH) * 0.54);
+
+        const rects = [];
+        const placeRow = (numInRow, rowIdx, offsetIdx) => {
+          const rowW = numInRow * flaskW + (numInRow - 1) * gapX;
+          const startX = (w - rowW) / 2;
+          const topY = startY + rowIdx * (flaskH + rowGap);
+          for (let i = 0; i < numInRow; i++) {
+            const x = startX + i * (flaskW + gapX);
+            rects[offsetIdx + i] = {
+              x,
+              topY,
+              w: flaskW,
+              h: flaskH,
+              cx: x + flaskW / 2,
+              cy: topY + flaskH / 2
+            };
+          }
+        };
+
+        placeRow(row1Count, 0, 0);
+        if (rows === 2) {
+          placeRow(row2Count, 1, row1Count);
+        }
+
+        view.rects = rects;
+      }
+
+      function getFlaskRect(idx) {
+        return view.rects[idx] || { x: 0, topY: 0, w: 60, h: 180, cx: 30, cy: 90 };
+      }
+
+      function resizeCanvas() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        view.width = Math.max(280, rect.width);
+        view.height = Math.max(280, rect.height);
+        view.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+
+        canvas.width = Math.floor(view.width * view.dpr);
+        canvas.height = Math.floor(view.height * view.dpr);
+        ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+
+        updateLayoutMetrics();
+      }
+
+      function drawRoundedRectPath(c, x, y, w, h, r) {
+        const radius = Math.min(r, w / 2, h / 2);
+        c.beginPath();
+        c.moveTo(x + radius, y);
+        c.lineTo(x + w - radius, y);
+        c.quadraticCurveTo(x + w, y, x + w, y + radius);
+        c.lineTo(x + w, y + h - radius);
+        c.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+        c.lineTo(x + radius, y + h);
+        c.quadraticCurveTo(x, y + h, x, y + h - radius);
+        c.lineTo(x, y + radius);
+        c.quadraticCurveTo(x, y, x + radius, y);
+        c.closePath();
+      }
+
+      function traceFlaskPath(c, x, y, w, h) {
+        const r = w * 0.5;
+        const neckInset = w * 0.04;
+        c.beginPath();
+        c.moveTo(x + neckInset, y);
+        c.lineTo(x + w - neckInset, y);
+        c.lineTo(x + w, y + h - r);
+        c.arc(x + w / 2, y + h - r, r, 0, Math.PI, false);
+        c.lineTo(x + neckInset, y);
+        c.closePath();
+      }
+
+      function drawBackground(time) {
+        const w = view.width;
+        const h = view.height;
+
+        // Глубокий алхимический радиальный свет из центра
+        const bgGrad = ctx.createRadialGradient(w * 0.5, h * 0.42, 20, w * 0.5, h * 0.46, Math.max(w, h) * 0.78);
+        bgGrad.addColorStop(0, '#0e3c3f');
+        bgGrad.addColorStop(0.48, '#06202b');
+        bgGrad.addColorStop(1, '#030d15');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Тонкий алхимический астролябийный круг на фоне
+        ctx.save();
+        ctx.translate(w * 0.5, h * 0.48);
+        const ringR = Math.min(w, h) * 0.36;
+        ctx.strokeStyle = 'rgba(94, 234, 212, 0.055)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(0, 0, ringR, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(245, 185, 66, 0.045)';
+        ctx.beginPath();
+        ctx.arc(0, 0, ringR * 0.78, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Медленное вращение рунных делений
+        ctx.rotate(time * 0.035);
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a) * ringR * 0.94, Math.sin(a) * ringR * 0.94);
+          ctx.lineTo(Math.cos(a) * ringR * 1.04, Math.sin(a) * ringR * 1.04);
+          ctx.strokeStyle = 'rgba(94, 234, 212, 0.065)';
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // Парящие алхимические пылинки
+        for (let i = 0; i < state.ambientMotes.length; i++) {
+          const m = state.ambientMotes[i];
+          const px = ((m.x + Math.sin(time * 0.4 + m.phase) * 0.02 + 1) % 1) * w;
+          const py = ((m.y - time * m.speedY + 10) % 1) * h;
+          ctx.globalAlpha = m.alpha * (0.65 + 0.35 * Math.sin(time * 1.8 + m.phase));
+          ctx.fillStyle = m.tint;
+          ctx.beginPath();
+          ctx.arc(px, py, m.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      function drawCork(cx, topY, w, sealProgress) {
+        const corkW = w * 0.72;
+        const corkH = Math.max(14, w * 0.28);
+        const dropOffset = (1 - sealProgress) * -28;
+
+        ctx.save();
+        ctx.translate(cx, topY - corkH * 0.32 + dropOffset);
+
+        // Свечение магической пробки
+        const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, corkW * 0.9);
+        glow.addColorStop(0, 'rgba(255, 224, 128, 0.45)');
+        glow.addColorStop(1, 'rgba(255, 224, 128, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(0, 0, corkW * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Тело пробки (золотой конус)
+        const cGrad = ctx.createLinearGradient(-corkW / 2, 0, corkW / 2, 0);
+        cGrad.addColorStop(0, '#8d5717');
+        cGrad.addColorStop(0.32, '#f7cb67');
+        cGrad.addColorStop(0.68, '#d4952a');
+        cGrad.addColorStop(1, '#6e400c');
+
+        ctx.fillStyle = cGrad;
+        ctx.beginPath();
+        ctx.moveTo(-corkW * 0.56, -corkH * 0.55);
+        ctx.lineTo(corkW * 0.56, -corkH * 0.55);
+        ctx.lineTo(corkW * 0.42, corkH * 0.55);
+        ctx.lineTo(-corkW * 0.42, corkH * 0.55);
+        ctx.closePath();
+        ctx.fill();
+
+        // Золотой ободок с кристаллом
+        ctx.fillStyle = '#ffe9a3';
+        drawRoundedRectPath(ctx, -corkW * 0.62, -corkH * 0.62, corkW * 1.24, corkH * 0.26, 4);
+        ctx.fill();
+
+        ctx.fillStyle = '#1ee3b5';
+        ctx.beginPath();
+        ctx.arc(0, -corkH * 0.49, Math.max(2.6, corkW * 0.08), 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      function drawSingleFlask(idx, time, overridePos) {
+        const flask = state.flasks[idx];
+        const base = getFlaskRect(idx);
+        const w = base.w;
+        const h = base.h;
+
+        let cx = overridePos ? overridePos.cx : base.cx;
+        let cy = overridePos ? overridePos.cy : base.cy - flask.lift * Math.min(24, h * 0.13);
+        const angle = overridePos ? overridePos.angle : 0;
+
+        if (flask.shake > 0.01 && !overridePos) {
+          cx += Math.sin(flask.shake * Math.PI * 6) * 6 * flask.shake;
+        }
+
+        const x = -w / 2;
+        const y = -h / 2;
+
+        // Определяем отображаемые слои (во время переливания используем плавный прогресс!)
+        let displayLayers = flask.layers;
+        let topLayerFillFraction = 1;
+        let pourColor = -1;
+
+        if (state.pourAnim) {
+          const a = state.pourAnim;
+          const t = Math.min(1, a.elapsed / a.duration);
+          // Жидкость перетекает в интервале [0.22 .. 0.84] анимации
+          const fillT = Math.max(0, Math.min(1, (t - 0.22) / 0.62));
+
+          if (idx === a.fromIdx) {
+            const remainingExact = a.srcStartCount - a.count * fillT;
+            const fullCount = Math.floor(remainingExact);
+            const partial = remainingExact - fullCount;
+            const arr = flask.layers.slice();
+            while (arr.length < fullCount) arr.push(a.color);
+            if (partial > 0.01) {
+              arr.push(a.color);
+              topLayerFillFraction = partial;
+            }
+            displayLayers = arr;
+            pourColor = a.color;
+          } else if (idx === a.toIdx) {
+            const currentExact = a.dstStartCount + a.count * fillT;
+            const fullCount = Math.floor(currentExact);
+            const partial = currentExact - fullCount;
+            const targetLen = partial > 0.01 ? fullCount + 1 : fullCount;
+            displayLayers = flask.layers.slice(0, targetLen);
+            if (partial > 0.01) {
+              topLayerFillFraction = partial;
+            }
+            pourColor = a.color;
+          }
+        }
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+
+        // Тень на полке / воздухе
+        if (!overridePos) {
+          const shadowScale = 1 - flask.lift * 0.18;
+          ctx.save();
+          ctx.translate(0, h / 2 + 12 + flask.lift * Math.min(24, h * 0.13));
+          ctx.scale(shadowScale, 0.26 * shadowScale);
+          const shGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, w * 0.68);
+          shGrad.addColorStop(0, 'rgba(0, 0, 0, 0.55)');
+          shGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          ctx.fillStyle = shGrad;
+          ctx.beginPath();
+          ctx.arc(0, 0, w * 0.68, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Магическое свечение выбранной или запечатанной колбы
+        if (state.selectedIdx === idx && flask.lift > 0.05) {
+          const topIdx = displayLayers.length > 0 ? displayLayers[displayLayers.length - 1] : 1;
+          const auraColor = ELIXIRS[topIdx % ELIXIRS.length].glow;
+          ctx.save();
+          ctx.shadowColor = auraColor;
+          ctx.shadowBlur = 26 * flask.lift;
+          ctx.strokeStyle = auraColor;
+          ctx.lineWidth = 2.4;
+          traceFlaskPath(ctx, x - 2, y - 2, w + 4, h + 4);
+          ctx.stroke();
+          ctx.restore();
+        } else if (flask.sealed) {
+          ctx.save();
+          const topIdx = displayLayers.length > 0 ? displayLayers[0] : 3;
+          ctx.shadowColor = ELIXIRS[topIdx % ELIXIRS.length].glow;
+          ctx.shadowBlur = 18;
+          ctx.strokeStyle = 'rgba(255, 224, 130, 0.52)';
+          ctx.lineWidth = 2;
+          traceFlaskPath(ctx, x - 1.5, y - 1.5, w + 3, h + 3);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Внутренняя полость стекла (тёмно-прозрачная подложка)
+        traceFlaskPath(ctx, x, y, w, h);
+        ctx.fillStyle = 'rgba(8, 25, 34, 0.48)';
+        ctx.fill();
+
+        // Отрисовка цветных слоёв жидкости внутри клип-маски колбы
+        if (displayLayers.length > 0) {
+          ctx.save();
+          const pad = Math.max(2.5, w * 0.055);
+          traceFlaskPath(ctx, x + pad, y + pad, w - pad * 2, h - pad * 2);
+          ctx.clip();
+
+          const usableH = (h - pad * 2) * 0.82;
+          const layerH = usableH / CAPACITY;
+          const bottomY = y + h - pad;
+
+          let currentY = bottomY;
+          for (let i = 0; i < displayLayers.length; i++) {
+            const cIdx = displayLayers[i];
+            const elixir = ELIXIRS[cIdx % ELIXIRS.length];
+            const isTop = i === displayLayers.length - 1;
+            const segH = isTop ? layerH * topLayerFillFraction : layerH;
+            const topEdge = currentY - segH;
+
+            // Градиент слоя (неоновая глубина)
+            const liqGrad = ctx.createLinearGradient(x, topEdge, x + w, currentY);
+            liqGrad.addColorStop(0, elixir.top);
+            liqGrad.addColorStop(0.45, elixir.mid);
+            liqGrad.addColorStop(1, elixir.bot);
+
+            ctx.fillStyle = liqGrad;
+            ctx.beginPath();
+            if (isTop) {
+              // Лёгкая волна на верхней поверхности жидкости
+              const waveAmp = state.selectedIdx === idx || pourColor >= 0 ? 2.4 : 1.1;
+              ctx.moveTo(x, currentY + 1);
+              ctx.lineTo(x, topEdge);
+              const steps = 10;
+              for (let s = 0; s <= steps; s++) {
+                const wx = x + (s / steps) * w;
+                const wy = topEdge + Math.sin(time * 5.2 + s * 0.8 + idx) * waveAmp;
+                ctx.lineTo(wx, wy);
+              }
+              ctx.lineTo(x + w, currentY + 1);
+            } else {
+              ctx.rect(x, topEdge - 0.5, w, segH + 1.5);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Световая грань на стыке/поверхности
+            if (isTop) {
+              ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+              ctx.lineWidth = 1.6;
+              ctx.beginPath();
+              const waveAmp = state.selectedIdx === idx || pourColor >= 0 ? 2.4 : 1.1;
+              for (let s = 0; s <= 10; s++) {
+                const wx = x + (s / 10) * w;
+                const wy = topEdge + Math.sin(time * 5.2 + s * 0.8 + idx) * waveAmp;
+                if (s === 0) ctx.moveTo(wx, wy);
+                else ctx.lineTo(wx, wy);
+              }
+              ctx.stroke();
+            } else {
+              // Тонкая разделительная тень между разными цветами
+              ctx.fillStyle = 'rgba(0, 12, 20, 0.22)';
+              ctx.fillRect(x, topEdge - 0.6, w, 1.2);
+            }
+
+            // Неоновые пузырьки внутри жидкости
+            const bubbleSeed = (idx * 7 + i * 13);
+            for (let b = 0; b < 2; b++) {
+              const bx = x + w * (0.28 + ((bubbleSeed + b * 37) % 45) / 100);
+              const bPhase = (time * 0.65 + (bubbleSeed + b * 19) * 0.13) % 1;
+              const by = currentY - bPhase * Math.max(4, segH - 4);
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.36)';
+              ctx.beginPath();
+              ctx.arc(bx, by, Math.max(1.2, w * 0.025), 0, Math.PI * 2);
+              ctx.fill();
+            }
+
+            currentY = topEdge;
+          }
+
+          // Внутренний вертикальный блик по жидкости
+          const innerShine = ctx.createLinearGradient(x, y, x + w * 0.38, y);
+          innerShine.addColorStop(0, 'rgba(255, 255, 255, 0.24)');
+          innerShine.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          ctx.fillStyle = innerShine;
+          ctx.fillRect(x + w * 0.08, y, w * 0.25, h);
+
+          ctx.restore();
+        }
+
+        // Контур стекла и глянцевые блики поверх жидкости
+        traceFlaskPath(ctx, x, y, w, h);
+        ctx.strokeStyle = flask.sealed
+          ? 'rgba(255, 224, 130, 0.78)'
+          : state.selectedIdx === idx
+          ? 'rgba(200, 255, 245, 0.92)'
+          : 'rgba(182, 240, 232, 0.44)';
+        ctx.lineWidth = Math.max(1.8, w * 0.036);
+        ctx.stroke();
+
+        // Левый глянцевый блик (стеклянная трубка)
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
+        ctx.lineWidth = Math.max(2.2, w * 0.055);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.16, y + h * 0.11);
+        ctx.lineTo(x + w * 0.14, y + h * 0.72);
+        ctx.stroke();
+
+        // Короткий нижний блик на дуге
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.32)';
+        ctx.lineWidth = Math.max(1.8, w * 0.04);
+        ctx.beginPath();
+        ctx.arc(0, y + h - w * 0.5, w * 0.36, Math.PI * 0.62, Math.PI * 0.86);
+        ctx.stroke();
+
+        // Правый тонкий рефлекс
+        ctx.strokeStyle = 'rgba(94, 234, 212, 0.22)';
+        ctx.lineWidth = Math.max(1.2, w * 0.025);
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.87, y + h * 0.16);
+        ctx.lineTo(x + w * 0.88, y + h * 0.72);
+        ctx.stroke();
+        ctx.restore();
+
+        // Расклешённый ободок горлышка колбы
+        const lipW = w * 1.12;
+        const lipH = Math.max(6, w * 0.13);
+        const lipGrad = ctx.createLinearGradient(-lipW / 2, y, lipW / 2, y);
+        lipGrad.addColorStop(0, 'rgba(185, 244, 235, 0.45)');
+        lipGrad.addColorStop(0.28, 'rgba(255, 255, 255, 0.85)');
+        lipGrad.addColorStop(0.65, 'rgba(160, 230, 222, 0.42)');
+        lipGrad.addColorStop(1, 'rgba(120, 200, 195, 0.52)');
+
+        ctx.fillStyle = lipGrad;
+        drawRoundedRectPath(ctx, -lipW / 2, y - lipH * 0.45, lipW, lipH, lipH * 0.5);
+        ctx.fill();
+
+        // Магическая пробка при заполнении 4 слоями одного цвета
+        if (flask.sealed) {
+          const sealP = 1 - flask.sealAnim * 0.65;
+          drawCork(0, y, w, sealP);
+        }
+
+        ctx.restore();
+      }
+
+      function drawPouringScene(time) {
+        const a = state.pourAnim;
+        if (!a) return;
+
+        const t = Math.min(1, a.elapsed / a.duration);
+        const srcBase = getFlaskRect(a.fromIdx);
+        const dstBase = getFlaskRect(a.toIdx);
+
+        // Выбираем сторону наклона так, чтобы колба оставалась внутри экрана
+        const pourFromRight = dstBase.cx < view.width * 0.5 ? 1 : -1;
+        const tiltAngleMax = -pourFromRight * (Math.PI * 0.36);
+
+        const mouthLocalX = -pourFromRight * (srcBase.w * 0.44);
+        const mouthLocalY = -srcBase.h * 0.5;
+        const dxLip = mouthLocalX * Math.cos(tiltAngleMax) - mouthLocalY * Math.sin(tiltAngleMax);
+        const dyLip = mouthLocalX * Math.sin(tiltAngleMax) + mouthLocalY * Math.cos(tiltAngleMax);
+
+        const desiredLipX = dstBase.cx + pourFromRight * (dstBase.w * 0.06);
+        const desiredLipY = Math.max(28, dstBase.topY - 18);
+
+        const pivotX = desiredLipX - dxLip;
+        const pivotY = desiredLipY - dyLip;
+
+        // Фазы переливания: подлёт [0..0.24], наклон и струя [0.22..0.84], возврат [0.82..1.0]
+        const easeInOut = (v) => v < 0.5 ? 2 * v * v : 1 - Math.pow(-2 * v + 2, 2) / 2;
+
+        let moveP = 0;
+        let tiltP = 0;
+        if (t < 0.24) {
+          moveP = easeInOut(t / 0.24);
+          tiltP = easeInOut(Math.max(0, (t - 0.08) / 0.16));
+        } else if (t <= 0.82) {
+          moveP = 1;
+          tiltP = 1;
+        } else {
+          const back = (t - 0.82) / 0.18;
+          moveP = 1 - easeInOut(back);
+          tiltP = 1 - easeInOut(Math.min(1, back * 1.4));
+        }
+
+        const curCx = srcBase.cx + (pivotX - srcBase.cx) * moveP;
+        const curCy = srcBase.cy + (pivotY - srcBase.cy) * moveP;
+        const tiltAngle = -pourFromRight * tiltP * (Math.PI * 0.36);
+
+        // Рисуем целевую колбу на своём месте
+        drawSingleFlask(a.toIdx, time);
+
+        // Рисуем струю переливающейся жидкости
+        if (t >= 0.20 && t <= 0.85) {
+          const elixir = ELIXIRS[a.color % ELIXIRS.length];
+          const sinA = Math.sin(tiltAngle);
+          const cosA = Math.cos(tiltAngle);
+          // Вычисляем координаты горлышка наклонённой колбы
+          const mouthLocalX = -pourFromRight * (srcBase.w * 0.42);
+          const mouthLocalY = -srcBase.h * 0.5;
+          const startX = curCx + mouthLocalX * cosA - mouthLocalY * sinA;
+          const startY = curCy + mouthLocalX * sinA + mouthLocalY * cosA;
+
+          const fillT = Math.max(0, Math.min(1, (t - 0.22) / 0.62));
+          const curLevel = a.dstStartCount + a.count * fillT;
+          const usableH = (dstBase.h - 6) * 0.82;
+          const endY = dstBase.topY + dstBase.h - 4 - (curLevel / CAPACITY) * usableH;
+          const endX = dstBase.cx;
+
+          const streamWidth = Math.max(5, dstBase.w * 0.13) * (t < 0.28 ? (t - 0.2) / 0.08 : t > 0.78 ? (0.85 - t) / 0.07 : 1);
+
+          ctx.save();
+          ctx.strokeStyle = elixir.mid;
+          ctx.shadowColor = elixir.glow;
+          ctx.shadowBlur = 14;
+          ctx.lineWidth = Math.max(2, streamWidth);
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(startX, startY);
+          const ctrlX = (startX + endX) * 0.5 - pourFromRight * 4;
+          const ctrlY = startY + (endY - startY) * 0.25;
+          ctx.quadraticCurveTo(ctrlX, ctrlY, endX, endY);
+          ctx.stroke();
+
+          // Светлое ядро струи
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = elixir.top;
+          ctx.lineWidth = Math.max(1, streamWidth * 0.45);
+          ctx.stroke();
+
+          // Брызги в точке падения струи
+          if (Math.random() < 0.55) {
+            state.particles.push({
+              x: endX + (Math.random() - 0.5) * 8,
+              y: endY,
+              vx: (Math.random() - 0.5) * 80,
+              vy: -40 - Math.random() * 70,
+              gravity: 320,
+              radius: 1.5 + Math.random() * 2,
+              color: elixir.top,
+              glow: elixir.glow,
+              life: 0,
+              maxLife: 0.28 + Math.random() * 0.2
+            });
+          }
+          ctx.restore();
+        }
+
+        // Рисуем саму наклонённую исходную колбу поверх струи
+        drawSingleFlask(a.fromIdx, time, { cx: curCx, cy: curCy, angle: tiltAngle });
+      }
+
+      function updateAndDrawParticles(dt) {
+        for (let i = state.particles.length - 1; i >= 0; i--) {
+          const p = state.particles[i];
+          p.life += dt;
+          if (p.life >= p.maxLife) {
+            state.particles.splice(i, 1);
+            continue;
+          }
+          p.vy += p.gravity * dt;
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+
+          const alpha = 1 - p.life / p.maxLife;
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = p.color;
+          ctx.shadowColor = p.glow;
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius * (0.4 + 0.6 * alpha), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      let lastTs = 0;
+      function loop(ts) {
+        const now = ts * 0.001;
+        const dt = Math.min(0.05, lastTs ? now - lastTs : 0.016);
+        lastTs = now;
+
+        // Обновляем плавные состояния колб
+        for (let i = 0; i < state.flasks.length; i++) {
+          const f = state.flasks[i];
+          const targetLift = state.selectedIdx === i ? 1 : 0;
+          f.lift += (targetLift - f.lift) * Math.min(1, dt * 16);
+          if (f.shake > 0) {
+            f.shake = Math.max(0, f.shake - dt * 3.8);
+          }
+          if (f.sealAnim > 0) {
+            f.sealAnim = Math.max(0, f.sealAnim - dt * 4.2);
+          }
+        }
+
+        if (state.pourAnim) {
+          state.pourAnim.elapsed += dt;
+          if (state.pourAnim.elapsed >= state.pourAnim.duration) {
+            completePourAnimation();
+          }
+        }
+
+        drawBackground(now);
+
+        // Отрисовываем все колбы, кроме участвующих в текущем переливании (они рисуются поверх)
+        for (let i = 0; i < state.flasks.length; i++) {
+          if (state.pourAnim && (i === state.pourAnim.fromIdx || i === state.pourAnim.toIdx)) {
+            continue;
+          }
+          drawSingleFlask(i, now);
+        }
+
+        if (state.pourAnim) {
+          drawPouringScene(now);
+        }
+
+        updateAndDrawParticles(dt);
+
+        requestAnimationFrame(loop);
+      }
+
+      // =========================================================
+      // 7. POINTER INPUT & UI BINDINGS
+      // =========================================================
+      canvas.addEventListener('pointerdown', (e) => {
+        SoundFX.ensureContext();
+        const rect = canvas.getBoundingClientRect();
+        const px = e.clientX - rect.left;
+        const py = e.clientY - rect.top;
+
+        for (let i = 0; i < state.flasks.length; i++) {
+          const r = getFlaskRect(i);
+          const hitPadX = Math.max(10, r.w * 0.22);
+          const hitPadY = 16;
+          if (
+            px >= r.x - hitPadX &&
+            px <= r.x + r.w + hitPadX &&
+            py >= r.topY - hitPadY - 20 &&
+            py <= r.topY + r.h + hitPadY
+          ) {
+            handleFlaskClick(i);
+            return;
+          }
+        }
+
+        // Клик по пустому фону снимает выделение
+        if (state.selectedIdx !== -1) {
+          state.selectedIdx = -1;
+          SoundFX.playDeselect();
+        }
+      });
+
+      const UI = {
+        elLevel: document.getElementById('hudLevel'),
+        elMoves: document.getElementById('hudMoves'),
+        elCoins: document.getElementById('hudCoins'),
+        btnUndo: document.getElementById('btnUndo'),
+        undoSub: document.getElementById('undoSub'),
+        btnAddFlask: document.getElementById('btnAddFlask'),
+        addFlaskSub: document.getElementById('addFlaskSub'),
+        btnRestart: document.getElementById('btnRestart'),
+        btnSound: document.getElementById('btnSound'),
+        iconSoundOn: document.getElementById('iconSoundOn'),
+        iconSoundOff: document.getElementById('iconSoundOff'),
+        btnRules: document.getElementById('btnRules'),
+        btnCloseRules: document.getElementById('btnCloseRules'),
+        rulesModal: document.getElementById('rulesModal'),
+        victoryModal: document.getElementById('victoryModal'),
+        victoryTitle: document.getElementById('victoryTitle'),
+        victoryReward: document.getElementById('victoryReward'),
+        victoryMoves: document.getElementById('victoryMoves'),
+        btnNextLevel: document.getElementById('btnNextLevel'),
+        btnShareLevel: document.getElementById('btnShareLevel'),
+        toastBanner: document.getElementById('toastBanner'),
+        stuckBar: document.getElementById('stuckBar'),
+        toastTimer: null,
+
+        updateAll() {
+          this.elLevel.textContent = String(state.level);
+          this.elMoves.textContent = String(state.moves);
+          this.elCoins.textContent = String(state.coins);
+
+          // Кнопка отмены хода
+          this.btnUndo.disabled = state.history.length === 0 || state.won || state.adBusy;
+          if (state.freeUndosLeft > 0) {
+            this.undoSub.textContent = 'Бесплатно: ' + state.freeUndosLeft;
+            this.btnUndo.classList.remove('btn-ad-ready');
+          } else {
+            this.undoSub.textContent = 'За рекламу';
+            this.btnUndo.classList.add('btn-ad-ready');
+          }
+
+          // Кнопка +1 Колба
+          const remainingExtra = state.maxExtraFlasks - state.extraFlasksAdded;
+          const canAdd = remainingExtra > 0 && !state.won && !state.adBusy;
+          this.btnAddFlask.disabled = !canAdd;
+          if (remainingExtra > 0) {
+            this.btnAddFlask.classList.add('btn-ad-ready');
+            this.addFlaskSub.textContent = 'За рекламу (' + remainingExtra + ')';
+          } else {
+            this.btnAddFlask.classList.remove('btn-ad-ready');
+            this.addFlaskSub.textContent = 'Максимум';
+          }
+
+          // Звук
+          this.iconSoundOn.style.display = SoundFX.muted ? 'none' : 'block';
+          this.iconSoundOff.style.display = SoundFX.muted ? 'block' : 'none';
+        },
+
+        showToast(msg) {
+          this.toastBanner.textContent = msg;
+          this.toastBanner.classList.add('visible');
+          if (this.toastTimer) clearTimeout(this.toastTimer);
+          this.toastTimer = setTimeout(() => {
+            this.toastBanner.classList.remove('visible');
+          }, 2600);
+        },
+
+        setStuck(isStuck) {
+          if (isStuck) {
+            this.stuckBar.classList.add('visible');
+          } else {
+            this.stuckBar.classList.remove('visible');
+          }
+        },
+
+        showVictory(reward, moves, level) {
+          this.victoryTitle.textContent = 'Уровень ' + level + ' пройден!';
+          this.victoryReward.textContent = '+' + reward;
+          this.victoryMoves.textContent = String(moves);
+          this.victoryModal.classList.add('open');
+        },
+
+        hideVictory() {
+          this.victoryModal.classList.remove('open');
+        }
+      };
+
+      UI.btnUndo.addEventListener('click', () => performUndo());
+      UI.btnAddFlask.addEventListener('click', () => performAddFlask());
+      UI.btnRestart.addEventListener('click', () => restartCurrentLevel());
+
+      UI.btnSound.addEventListener('click', () => {
+        SoundFX.muted = !SoundFX.muted;
+        SoundFX.savePreference();
+        if (!SoundFX.muted) SoundFX.playClick();
+        UI.updateAll();
+      });
+
+      UI.btnRules.addEventListener('click', () => {
+        SoundFX.playClick();
+        UI.rulesModal.classList.add('open');
+      });
+
+      UI.btnCloseRules.addEventListener('click', () => {
+        SoundFX.playClick();
+        UI.rulesModal.classList.remove('open');
+      });
+
+      UI.rulesModal.addEventListener('click', (e) => {
+        if (e.target === UI.rulesModal) {
+          UI.rulesModal.classList.remove('open');
+        }
+      });
+
+      UI.btnNextLevel.addEventListener('click', async () => {
+        SoundFX.playClick();
+        const completedLevel = state.level;
+        UI.hideVictory();
+
+        // Межстраничная реклама каждые 2 уровня
+        if (completedLevel % 2 === 0) {
+          await VKService.showInterstitialAd();
+        }
+
+        initLevel(completedLevel + 1);
+      });
+
+      UI.btnShareLevel.addEventListener('click', () => {
+        SoundFX.playClick();
+        VKService.shareLevel(state.level);
+      });
+
+      window.addEventListener('resize', resizeCanvas);
+
+      // =========================================================
+      // 8. BOOTSTRAP
+      // =========================================================
+      VKService.init();
+      SoundFX.loadPreference();
+      loadProgress();
+      initAmbientMotes();
+      initLevel(state.level);
+      resizeCanvas();
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>
